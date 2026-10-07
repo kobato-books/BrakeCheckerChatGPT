@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {evaluate,dec,rounded} from './dist/engine.mjs';
+const base={type:'general',unit:'N',massMode:'measured',axes:[{mass:'600',left:'1800',right:'1800',rear:false},{mass:'400',left:'650',right:'650',rear:true}],parkTotal:'1960',hold:'yes'};
+let count=0;function test(name,f){f();count++;console.log('✓ '+name)}
+const run=(extra={})=>evaluate({...base,...extra});
+test('基準ぴったり:総和4.90・駐車1.96',()=>assert.equal(run().status,'pass'));
+test('総和4.899は四捨五入で適合にしない',()=>{let r=run({axes:[{mass:'600',left:'1799',right:'1800'},{mass:'400',left:'650',right:'650',rear:true}]});assert.equal(r.rows[0].value,'4.89');assert.equal(r.rows[0].status,'fail')});
+test('左右差0.780ちょうど以下',()=>{let r=run({axes:[{mass:'600',left:'2268',right:'1800'},{mass:'400',left:'650',right:'650',rear:true}]});assert.equal(r.rows.find(x=>x.label==='第1軸 左右差').status,'pass')});
+test('左右差0.780001は切上げて否',()=>{let r=run({axes:[{mass:'600',left:'2268.0006',right:'1800'},{mass:'400',left:'650',right:'650',rear:true}]});let d=r.rows.find(x=>x.label==='第1軸 左右差');assert.equal(d.value,'0.79');assert.equal(d.status,'fail')});
+test('Nとkgfの左右差基準を混同しない',()=>{const axes=[{mass:'600',left:'348',right:'300'},{mass:'400',left:'100',right:'100',rear:true}];assert.equal(run({unit:'kgf',axes,parkTotal:'200'}).status,'pass');assert.equal(run({unit:'daN',axes}).rows.find(x=>x.label==='第1軸 左右差').status,'fail')});
+test('kgfの小数第2位切捨て・切上げ',()=>{assert.equal(rounded(53333n,1000n,1),'53.3');assert.equal(rounded(1379n,1000n,1,true),'1.4')});
+test('daNとkNの測定値はNと同じ結果',()=>{for(const [unit,k] of [['daN',10],['kN',1000]]){const axes=base.axes.map(a=>({...a,left:String(Number(a.left)/k),right:String(Number(a.right)/k)}));assert.equal(run({unit,axes,parkTotal:String(1960/k)}).status,'pass')}});
+test('車検証前軸55kgのみ加算、二重加算なし',()=>{let r=run({massMode:'certificate'});assert.equal(r.weight,'1055');assert.deepEqual(r.axes,['655','400']);assert.equal(run().weight,'1000')});
+test('湿潤は総和のみ緩和、後輪の和は維持',()=>{let axes=[{mass:'600',left:'1800',right:'1800'},{mass:'400',left:'195',right:'195',rear:true}];let r=run({axes,wet:true});assert.equal(r.rows[0].status,'pass');assert.equal(r.rows.find(x=>x.label==='第2軸 後輪の和').status,'fail')});
+test('前軸ロックで後輪の和と左右差を免除しない',()=>{let r=run({axes:[{mass:'600',left:'100',right:'600',lock:true},{mass:'400',left:'0',right:'0',rear:true}]});assert.equal(r.rows[0].status,'deemed');assert.equal(r.status,'fail')});
+test('駐車ロックでも保持条件は必須',()=>{assert.equal(run({parkTotal:'0',parkLock:true,hold:'unknown'}).status,'pending');assert.equal(run({parkTotal:'0',parkLock:true,hold:'no'}).status,'fail');assert.equal(run({parkTotal:'0',parkLock:true}).status,'deemed')});
+test('低速特例は総重量で除算し後輪10%を適用しない',()=>{let r=run({type:'low',empty:'1000',gross:'1250',speed:'79.999',axes:[{mass:'600',left:'2500',right:'2500'},{mass:'400',left:'0',right:'0'}]});assert.equal(r.status,'pass');assert.equal(r.rows[0].value,'4.00');assert.equal(r.rows.length,4)});
+test('80km/hちょうどは特例対象外',()=>assert.equal(run({type:'low',empty:'1000',gross:'1200',speed:'80'}).status,'input'));
+test('1.25倍を超える低速車は特例対象外',()=>assert.equal(run({type:'low',empty:'1000',gross:'1250.001',speed:'79'}).status,'input'));
+test('低速車 車検証各軸重と車両重量の整合性',()=>assert.equal(run({type:'low',massMode:'certificate',empty:'900',gross:'1000',speed:'79'}).status,'input'));
+test('被牽引車は軸別判定、分離制動総和は別に判定',()=>{let r=run({type:'trailer',axes:[{mass:'1000',left:'2450',right:'2450'}],trailerWeight:'1200',parkTotal:'2352',breakaway:'2352'});assert.equal(r.status,'pass');assert.equal(r.rows[0].value,'4.90');assert.equal(r.rows.at(-1).value,'1.96')});
+test('被牽引車の分離ブレーキをロックで免除しない',()=>{let r=run({type:'trailer',axes:[{mass:'1000',left:'0',right:'0',lock:true}],trailerWeight:'1000',breakaway:'0'});assert.equal(r.rows[0].status,'deemed');assert.equal(r.rows.at(-1).status,'fail')});
+test('被牽引車の特例は適合を表示しない',()=>assert.equal(run({type:'trailer',exception:true,trailerWeight:'1000'}).status,'input'));
+test('空欄・負数・ゼロ軸重・指数表記を拒否',()=>{for(const mass of ['', '-1','0','1e3'])assert.equal(run({axes:[{mass,left:'1',right:'1'},base.axes[1]]}).status,'input');assert.throws(()=>dec('NaN'))});
+test('4軸の後車軸は各軸判定',()=>{let axes=Array.from({length:4},(_,i)=>({mass:'250',left:'650',right:'650',rear:i>0}));let r=run({axes});assert.equal(r.rows.filter(x=>x.label.includes('後輪')).length,3);assert.equal(r.status,'pass')});
+console.log(`${count} tests passed`);
