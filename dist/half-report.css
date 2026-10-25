@@ -1,0 +1,24 @@
+/* 試作専用：A4縦の上半分にA5横相当の計算記録。下半分は白紙。 */
+.half-sheet{box-sizing:border-box;width:210mm;height:148.5mm;padding:8mm 10mm;background:white;color:#263e45}
+.calculation-slip{width:190mm;margin:0;padding:0;font-family:'Meiryo',sans-serif;font-size:8pt;line-height:1.3;transform:scale(var(--slip-scale,1));transform-origin:top left;overflow-wrap:anywhere}
+.calculation-slip *{box-sizing:border-box}
+.calculation-slip .slip-header{max-width:none;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #8da8a7;padding:0 0 1.5mm;margin:0;gap:4mm}
+.slip-header h1{font-size:13pt;margin:0;line-height:1.3;color:#2b6e68}
+.slip-header span{font-size:7.5pt}
+.slip-meta{display:flex;justify-content:space-between;gap:3mm;margin:1.5mm 0 1mm;font-size:8pt}
+.slip-weight{font-size:7.5pt;margin:0 0 1mm}
+.slip-group{border-top:.4pt solid #c1cece;padding:1mm 0}
+.slip-group h2{font-size:8pt;line-height:1.2;color:#2b6e68;margin:0 0 .7mm;font-weight:600}
+.slip-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.8mm 14mm}
+.slip-cell{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:0 3mm;min-width:0}
+.slip-label{grid-column:1;grid-row:1/3;font-size:8pt;line-height:1.25;align-self:center}
+.slip-cell strong{grid-column:2;font-size:12pt;font-weight:650;line-height:1.15;text-align:right;font-variant-numeric:tabular-nums}
+.slip-cell small{grid-column:2;font-size:7pt;line-height:1.1;text-align:right}
+.slip-notes{font-size:7pt;line-height:1.3;margin:1mm 0;overflow-wrap:anywhere}
+.slip-footer{display:flex;justify-content:space-between;gap:3mm;border-top:.4pt solid #c1cece;padding-top:1mm;margin-top:1mm;font-size:6.5pt}
+@media print{
+ @page{size:A4 portrait;margin:0}
+ html,body{margin:0!important;padding:0!important;background:white!important}
+ #print-report.print-only{position:static!important;display:block!important;width:210mm!important;height:296mm!important;margin:0!important;padding:0!important;overflow:hidden!important}
+ .screen-app{display:none!important}
+}

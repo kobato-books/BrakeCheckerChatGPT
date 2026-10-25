@@ -1,0 +1,4 @@
+checks/
+node_modules/
+*.zip
+*.tgz

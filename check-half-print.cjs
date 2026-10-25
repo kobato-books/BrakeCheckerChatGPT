@@ -1,0 +1,25 @@
+const {chromium}=require('C:/Users/yukih/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({headless:true,channel:'msedge'});
+ const context=await browser.newContext({viewport:{width:794,height:1123}});
+ const settings={schema:2,unit:'N',type:'general',vehicleClass:'普通・小型・軽',axisCount:2,wheels:4,massMode:'record',rearAxes:[false,true]};
+ await context.addInitScript(s=>localStorage.setItem('brake-check:factory:v2',JSON.stringify(s)),settings);
+ const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://localhost:8766/');await page.locator('#demo').click();
+ for(const [id,value] of Object.entries({'mass-0':'895','left-0':'3550','right-0':'3730','mass-1':'780','left-1':'2350','right-1':'2280',parkTotal:'3460'}))await page.locator('#'+id).fill(value);
+ await page.locator('#vehicle-ref').fill('印刷確認 12-34');await page.locator('.collapsible-conditions').evaluate(el=>el.open=true);await page.locator('#hold').selectOption('unknown');await page.locator('#calculate').click();
+ assert((await page.locator('#overall').innerText()).includes('要確認'));
+ await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));await page.emulateMedia({media:'print'});
+ const text=await page.locator('#print-report').innerText();
+ for(const absent of ['適合','不適合','要確認','未判定','基準','保持未確認'])assert(!text.includes(absent),'Excluded: '+absent);
+ for(const number of ['3730','3550','2280','2350','11910','3460','0.21','0.09','5.93','7.11','2.06'])assert(text.includes(number),'Included: '+number);
+ const dimensions=await page.locator('.calculation-slip').evaluate(el=>{const rect=el.getBoundingClientRect(),sheet=el.parentElement.getBoundingClientRect();return {bottom:rect.bottom,halfBottom:sheet.bottom,scale:getComputedStyle(el).transform,overflows:[...el.querySelectorAll('*')].filter(n=>n.scrollWidth>n.clientWidth+2).map(n=>n.textContent)}});
+ assert(dimensions.bottom<=dimensions.halfBottom);assert.deepEqual(dimensions.overflows,[]);
+ const output=path.join(__dirname,'checks');fs.mkdirSync(output,{recursive:true});
+ await page.pdf({path:path.join(output,'a4-top-half-sample.pdf'),preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
+ await page.screenshot({path:path.join(output,'a4-top-half-print.png'),fullPage:true});
+ await page.emulateMedia({media:'screen'});
+ await page.locator('#right-0').fill('10');assert.equal(await page.locator('#print-report').innerHTML(),'');assert(await page.locator('#print-bottom').isDisabled());
+ assert.deepEqual(errors,[]);console.log(JSON.stringify(dimensions));await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});

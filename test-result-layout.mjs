@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {evaluate} from './dist/engine.mjs';
+import {DEFAULT_SETTINGS} from './dist/settings.mjs';
+import {resultLayoutPlan} from './dist/result-layout.mjs';
+const original='./reference-v3/';
+for(const file of ['engine.mjs','settings.mjs','style.css','report.mjs','report.css','print.mjs','result-order.mjs'])assert.deepEqual(fs.readFileSync('./dist/'+file),fs.readFileSync(original+file),file+' stays byte-identical');
+const html=fs.readFileSync('./dist/index.html','utf8').replace(/\r\n/g,'\n'),before=fs.readFileSync(original+'index.html','utf8').replace(/\r\n/g,'\n');
+const form=s=>s.match(/<form id="measurement-form"[\s\S]*?<\/form>/)[0];assert.equal(form(html),form(before),'Input form and button are unchanged');
+const initial=s=>s.match(/<section id="settings-panel"[\s\S]*?<\/section>/)[0];assert.equal(initial(html),initial(before));
+const app=fs.readFileSync('./dist/app.mjs','utf8').replace(/\r\n/g,'\n'),oldApp=fs.readFileSync(original+'app.mjs','utf8').replace(/\r\n/g,'\n');
+const removeRenderer=s=>s.replace(/function renderResults\([\s\S]*?\n\}\n/, '').replace("import {arrangeResultLayout} from './result-layout.mjs';\n",'');
+const withoutFeedback=removeRenderer(app).replace("import {updateInputFeedback} from './input-feedback.mjs';\n",'').replace('  updateInputFeedback(form,settings);\n','').replace("import {installResultTabs} from './result-tabs.mjs';\n",'').replace('installResultTabs();\n','');
+const withoutWorkflow=withoutFeedback.replace("import {installCompactWorkflow} from './compact-workflow.mjs';\n",'').replace('installCompactWorkflow();\n','');
+const printImports=withoutWorkflow.replace("import {STATUS_LABELS, TYPE_LABELS, MASS_LABELS, timestamp} from './report.mjs?v=3';\nimport {renderReport,fitA4} from './half-report.mjs';", "import {renderReport, STATUS_LABELS, TYPE_LABELS, MASS_LABELS, timestamp} from './report.mjs?v=3';\nimport {fitA4} from './print.mjs?v=3';").replace("import {installAppNavigation} from './app-navigation.mjs';\n",'').replace('installAppNavigation();\n','');
+assert.equal(printImports,removeRenderer(oldApp),'Existing handlers preserved; authorized presentation and print modules are separate');
+const input={type:'general',unit:'N',massMode:'record',axes:[{mass:'895',right:'3730',left:'3550'},{mass:'780',right:'2280',left:'2350',rear:true}],parkTotal:'3460',hold:'unknown'};
+for(const unit of ['N','daN','kN','kgf']){
+ const x={...input,unit},r=evaluate(x),plan=resultLayoutPlan(r,x,DEFAULT_SETTINGS);
+ assert.deepEqual(plan.map(p=>p.title),['前軸','後軸','総合','サイド']);
+ const keys=plan.flatMap(g=>g.cells).filter(c=>c.rowKey).map(c=>c.rowKey).sort();assert.deepEqual(keys,r.rows.map(row=>row.label).sort());
+ const rear=plan[1].cells.find(c=>c.label==='後軸制動力計算値');assert.equal(rear.column,2);assert.equal(rear.line,3);
+ const rearTotal=plan[1].cells.find(c=>c.label==='後輪制動力合計');assert.equal(rearTotal.value,'4630');assert.equal(rearTotal.column,1);assert.equal(rearTotal.line,3);assert.equal(rearTotal.unit,unit);
+ assert.deepEqual(plan[0].cells.filter(c=>c.column===1).map(c=>c.value),['3730','3550']);
+ assert.equal(plan[0].cells.find(c=>c.label==='左右差').unit,unit);
+}
+const trailer={...input,type:'trailer',massMode:'measured',trailerWeight:'1675',breakaway:'4000'};
+const tr=evaluate(trailer),tp=resultLayoutPlan(tr,trailer,{...DEFAULT_SETTINGS,type:'trailer'});
+assert.deepEqual(tp.flatMap(g=>g.cells).filter(c=>c.rowKey).map(c=>c.rowKey).sort(),tr.rows.map(row=>row.label).sort());
+console.log('Preservation checks and two-column result mapping passed for N/daN/kN/kgf and trailer.');

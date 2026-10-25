@@ -1,5 +1,5 @@
-import {displayRows} from './result-order.mjs?v=4';
-import {axisName, friendlyLabel} from './settings.mjs?v=4';
+import {displayRows} from './result-order.mjs?v=3';
+import {axisName, friendlyLabel} from './settings.mjs?v=3';
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const STATUS_LABELS = {pass:'適合', fail:'不適合', pending:'要確認', deemed:'適合（ロック）', input:'入力未完了'};
 export const TYPE_LABELS = {general:'一般車', low:'低速車特例', trailer:'被牽引車'};

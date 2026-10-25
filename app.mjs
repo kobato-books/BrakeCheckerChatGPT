@@ -1,8 +1,13 @@
-import {displayRows} from './result-order.mjs?v=4';
-import {evaluate, dec, formatDecimal} from './engine.mjs?v=4';
-import {loadSettings, saveSettings, validateSettings, axisName, friendlyLabel} from './settings.mjs?v=4';
-import {renderReport, STATUS_LABELS, TYPE_LABELS, MASS_LABELS, timestamp} from './report.mjs?v=4';
-import {fitA4} from './print.mjs?v=4';
+import {arrangeResultLayout} from './result-layout.mjs';
+import {updateInputFeedback} from './input-feedback.mjs';
+import {installResultTabs} from './result-tabs.mjs';
+import {installCompactWorkflow} from './compact-workflow.mjs';
+import {installAppNavigation} from './app-navigation.mjs';
+import {displayRows} from './result-order.mjs?v=3';
+import {evaluate, dec, formatDecimal} from './engine.mjs?v=3';
+import {loadSettings, saveSettings, validateSettings, axisName, friendlyLabel} from './settings.mjs?v=3';
+import {STATUS_LABELS, TYPE_LABELS, MASS_LABELS, timestamp} from './report.mjs?v=3';
+import {renderReport,fitA4} from './half-report.mjs';
 const $ = id => document.getElementById(id);
 const element = (tag, text, cls) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (cls) node.className = cls; return node; };
 const storage = {getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value)};
@@ -69,10 +74,6 @@ function buildMeasurements() {
     const name = axisName(settings,i), row = element('div',undefined,'axis-row'); row.append(element('strong',name));
     const massLabel = settings.massMode === 'record' ? `${name} 記録簿の計算済み軸重 kg（追加加算なし）` : settings.massMode === 'certificate' ? `${name} 車検証の空車時軸重 kg（55kgを足さず入力）` : `${name} 審査時の実測軸重 kg（加算なし）`;
     row.append(inputField(`mass-${i}`, massLabel), inputField(`left-${i}`, `${name} 左制動力 ${settings.unit}`), inputField(`right-${i}`, `${name} 右制動力 ${settings.unit}`)); $('axes').append(row);
-    const preview = element('div',undefined,'force-preview axis-force-preview');
-    preview.append(element('span',`${name} 左右差`));
-    const output = element('output','—'); output.id = `difference-${i}`;
-    output.setAttribute('for',`left-${i} right-${i}`); preview.append(output); $('axes').append(preview);
     if (settings.type === 'trailer' || i === 0) {
       const label = element('label',`${name}の全車輪がロックし、追加計測困難`,'check'), input = element('input');
       input.type = 'checkbox'; input.id = `lock-${i}`; label.prepend(input); $('lock-conditions').append(label);
@@ -92,7 +93,7 @@ function buildMeasurements() {
   updateMassPreview();
 }
 function updateMassPreview() {
-  updateForcePreview();
+  updateInputFeedback(form,settings);
   try {
     const inputs = Array.from({length:settings.axisCount},(_,i) => dec($(`mass-${i}`).value));
     if (inputs.some(n => n <= 0n)) throw Error();
@@ -104,22 +105,6 @@ function updateMassPreview() {
     else box.append(element('div',`各軸重の合計 ${formatDecimal(rawSum)} kg ／ 支持荷重を含む車両全体の重量を使用`));
     $('mass-preview').replaceChildren(box);
   } catch { $('mass-preview').textContent = settings.massMode === 'certificate' ? '前軸へのアプリ加算：55kg ／ 軸重を入力すると審査時車両重量を表示' : 'アプリの追加加算：0kg ／ 軸重を入力すると審査時車両重量を表示'; }
-}
-function updateForcePreview() {
-  const multiplier = {N:1n,daN:10n,kN:1000n,kgf:1n}[settings.unit];
-  const unit = settings.unit === 'kgf' ? 'kgf' : 'N';
-  let total = 0n, complete = true;
-  for (let i = 0; i < settings.axisCount; i++) {
-    try {
-      const left = dec($(`left-${i}`).value), right = dec($(`right-${i}`).value);
-      const difference = left > right ? left-right : right-left;
-      $(`difference-${i}`).textContent = `${formatDecimal(difference * multiplier)} ${unit}`;
-      total += (left + right) * multiplier;
-    } catch {
-      $(`difference-${i}`).textContent = '—'; complete = false;
-    }
-  }
-  $('force-total').textContent = complete ? `${formatDecimal(total)} ${unit}` : '—';
 }
 function readMeasurements() {
   return {
@@ -180,8 +165,9 @@ function renderResults(r, input, date) {
     pairs.forEach(([a,b]) => dl.append(element('dt',a),element('dd',b))); body.append(dl);
     if (settings.unit === 'daN' || settings.unit === 'kN') body.append(element('p',`入力した${settings.unit}値を${settings.unit==='daN'?'10':'1,000'}倍してNとして計算しています。`));
     body.append(element('p','丸め前は小数第8位までの参考表示です。「…」は続きがあることを示します。判定には正確な入力値と規定の端数処理を使用します。'));
-    if (row.note) body.append(element('p',row.note,'condition-note')); details.append(body); $('results').append(details);
+    if (row.note) body.append(element('p',row.note,'condition-note')); details.append(body); details.dataset.resultLabel=row.label; $('results').append(details);
   }
+  if(r.rows.length && !r.errors.length) arrangeResultLayout($('results'),r,input,settings);
   lastRecord = r.status === 'input' ? null : {result:r,input,settings:validateSettings(settings),date,demo:isDemo};
   $('print').disabled = !lastRecord;
   if (lastRecord) $('print-report').innerHTML = renderReport(r,input,settings,date,isDemo); else $('print-report').replaceChildren();
@@ -239,3 +225,6 @@ $('demo').addEventListener('click',() => {
 factorySummary(); buildMeasurements(); invalidateResult(true);
 setSettingsPanel(!settingsSaved); $('usage').open=!settingsSaved;
 if (loaded.message) notice(loaded.message);
+installResultTabs();
+installCompactWorkflow();
+installAppNavigation();
