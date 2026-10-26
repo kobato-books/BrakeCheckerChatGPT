@@ -1,20 +1,18 @@
-# 制動力チェック 4.0.0
+# 制動力チェック 4.1.0
 
-Updated: 2026-10-25 JST。正式版の公開先: https://brake-check-yukiko.yoshichin-misachin.chatgpt.site/
+Updated: 2026-10-27 JST。正式URL: https://brake.kobatobooks.jp/
 
-ビルド不要。dist/が配信対象。Sitesの既存プロジェクトと公開URLを継続する。GitHubはソースと履歴の保管先で、自動デプロイ設定は追加しない。
+ユーザーが確認・承認した2026-10-26入力改善試作を採用。入力は軸重を先に、各軸の右→左→左右差、総制動力、サイドの縦順。ラベル左・数値右、自動欄の背景を区別しサイドを測定欄末尾に独立配置。自動フォーカス移動なし。PCのTab順も上から順。
 
-PCは入力・結果の2列、850px以下は縦並び。一般車2軸の標準結果は前輪の差、後輪の差、後輪制動力、総合制動力、サイドブレーキの5行。N値・計算値・基準値・適否を併記。大きく表示では後輪合計を表示。多軸・被牽引車等は対応する項目を維持する。
+標準結果の5列構成を維持し、大きく表示も同じ一覧を全体拡大。結果と自動表示の数値は3桁区切り。多軸・低速車・被牽引車・N/daN/kN/kgfを維持。
 
-計算式・判定基準・丸め・換算・初期設定処理は実務版3から変更なし。基準確認日2026-10-05は公開日と区別する。記録簿方式は追加0kg、車検証方式のみ前軸に55kg。左右差の切上げ方式も維持する。
+計算式・判定基準・丸め・設定保存・印刷は4.0.0と同じ。初期設定キー brake-check:factory:v2（schema 2）、表示設定キー brake-check:result-display:v1を維持。車両番号・測定値・当日の条件は保存しない。同じ正式URLの保存設定を初期化しない。
 
-同じ本番URL、localStorageキー brake-check:factory:v2、schema 2を継続し、本番の保存設定を初期化しない。保存は初期設定と表示方法のみ。車両番号・計測値・当日の条件は保存しない。別URLのステージングの設定は転送しない。
+PWAはmanifest、standalone、Apple meta、ルートのid/start_url/scopeと既存アイコンを継続。オフラインキャッシュは導入していない。
 
-PWAはmanifest、standalone、Apple metaと180/192/512pxアイコン、ルートの起動先とscopeを維持。元からオフラインキャッシュはなし。
+配信の正本はdist/。GitHubはソース・変更履歴の保管先、実際の公開はSites。brake.kobatobooks.jpは既存本番Sitesへ接続済みでSSLもactive。今回DNS・独自ドメイン・アクセス設定は変更しない。GitHub側のルートソースは従来パスの互換コピーとしてdist/と一致させる。
 
-検証: node test.mjs / node test-workflow.mjs / node test-print.mjs / node test-v3.mjs / node test-result-layout.mjs / node test-half-report.mjs。
-ローカル確認: node serve-release.cjs（127.0.0.1:8776）。実務版3参照はreference-v3/。詳細はCHANGELOG.mdとRELEASE-CHECKS-2026-10-25.md。
+検証: node test.mjs / node test-workflow.mjs / node test-print.mjs / node test-v3.mjs / node test-half-report.mjs / node test-review.mjs / node test-result-layout.mjs。
+baseline/は4.0.0比較用、reference-v3/は以前の実務版3参照用。以前の説明・ソースはGit履歴にも保持。
 
-印刷はA4上半分の計算記録票。合否と基準は載せず、指定整備記録簿の代替ではない。実物印刷・AirPrint・iPhone実機のPWA起動は今回未確認。390pxの表示検証を実Safari検証とは扱わない。
-
-GitHubでは過去のルートのソースパスも互換用に更新し、dist/と同じ内容を保つ。配信の正本はdist/。ルートの旧ファイルを参照するリンクも維持する。
+A4上半分の計算記録票はそのまま。実物印刷・AirPrintは今回未確認。試作は利用者のレビューで承認済み。ブラウザ画面幅検証を実iPhoneでの操作確認とは扱わない。

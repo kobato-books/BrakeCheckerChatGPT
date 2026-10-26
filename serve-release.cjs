@@ -1,5 +1,5 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
-const root=path.join(__dirname,'dist'),port=8776;
+const root=path.join(__dirname,'dist'),port=8788;
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 http.createServer((req,res)=>{
  try{

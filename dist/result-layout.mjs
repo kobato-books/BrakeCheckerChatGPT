@@ -1,3 +1,4 @@
+import {groupNumber} from './input-feedback.mjs';
 import {dec, formatDecimal} from './engine.mjs?v=3';
 import {axisName} from './settings.mjs?v=3';
 import {applyResultView} from './result-tabs.mjs';
@@ -36,7 +37,7 @@ export function arrangeResultLayout(container, result, input, settings) {
   // kg表示も、結果内だけで「項目名→数値→単位」にそろえる。
   const weightHeading=document.querySelector('#result-summary .result-summary > strong');
   if(weightHeading){
-    weightHeading.textContent=`審査時車両重量 ${result.weight} kg`;
+    weightHeading.textContent=`審査時車両重量 ${groupNumber(result.weight)} kg`;
   }
   const audit=document.querySelector('#audit .audit-details table');
   if(audit){
@@ -55,42 +56,12 @@ export function arrangeResultLayout(container, result, input, settings) {
   standard.append(headings,...ordered.map(node=>{
     const copy=node.cloneNode(true),row=result.rows.find(row=>row.label===node.dataset.resultLabel);
     if(simple&&labels[row.label])copy.querySelector('.row-label').textContent=labels[row.label];
-    const force=document.createElement('span');force.className='row-force';force.textContent=row.force;
+    for(const selector of ['.row-value','.row-threshold']){const text=copy.querySelector(selector).firstChild;if(text?.nodeType===3)text.textContent=groupNumber(text.textContent);}
+    const force=document.createElement('span');force.className='row-force';force.textContent=groupNumber(row.force);
     const unit=document.createElement('small');unit.textContent=forceUnit;force.append(unit);
     copy.querySelector('summary').insertBefore(force,copy.querySelector('.row-value'));
     return copy;
   }));
-  const nodes = new Map(originalRows.map(node=>[node.dataset.resultLabel,node]));
-  const used = new Set();
-  const create = (tag,text,className) => {const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;};
-  const fragment=document.createDocumentFragment();
-  for(const group of resultLayoutPlan(result,input,settings)){
-    const section=create('section',undefined,'transfer-group');
-    section.append(create('h3',group.title,'transfer-heading'));
-    const grid=create('div',undefined,'transfer-grid');
-    for(const cell of group.cells){
-      let item;
-      if(cell.rowKey){
-        item=nodes.get(cell.rowKey);if(!item)continue;
-        used.add(item);item.classList.add('transfer-calculation');
-        item.querySelector('.row-label').textContent=cell.label;
-        item.querySelector('.row-threshold').prepend(document.createTextNode('基準 '));
-        const summary=item.querySelector('summary');
-        const criteria=document.createElement('span');criteria.className='criteria-inline';
-        criteria.append(item.querySelector('.row-threshold'),item.querySelector('.badge'));
-        summary.append(criteria);
-      }else{
-        item=create('div',undefined,'transfer-measurement');
-        item.append(create('span',cell.label,'transfer-label'));
-        const value=create('span',cell.value,'transfer-value');value.append(create('small',cell.unit,'transfer-unit'));item.append(value);
-      }
-      item.style.gridColumn=cell.column;item.style.gridRow=cell.line;grid.append(item);
-    }
-    section.append(grid);fragment.append(section);
-  }
-  // 想定外の既存判定項目も消さずに維持する。
-  const remaining=originalRows.filter(node=>!used.has(node));
-  if(remaining.length){const other=create('section',undefined,'transfer-group');other.append(create('h3','その他の判定','transfer-heading'),...remaining);fragment.append(other);}
-  const large=create('div',undefined,'result-large');large.append(fragment);
+  const large=standard.cloneNode(true);large.classList.add('result-large');
   container.replaceChildren(standard,large);applyResultView();
 }

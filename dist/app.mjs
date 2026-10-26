@@ -1,3 +1,4 @@
+import {arrangeInputSequence} from './input-sequence.mjs';
 import {arrangeResultLayout} from './result-layout.mjs';
 import {updateInputFeedback} from './input-feedback.mjs';
 import {installResultTabs} from './result-tabs.mjs';
@@ -90,6 +91,7 @@ function buildMeasurements() {
   };
   $('mass-instruction').replaceChildren(element('strong',instructions[settings.massMode][0]),element('span',instructions[settings.massMode][1]));
   $('low-fields').hidden = settings.type !== 'low'; $('trailer-fields').hidden = settings.type !== 'trailer'; $('exception-field').hidden = settings.type !== 'trailer';
+  arrangeInputSequence(form,settings);
   updateMassPreview();
 }
 function updateMassPreview() {

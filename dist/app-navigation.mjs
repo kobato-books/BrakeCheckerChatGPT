@@ -14,6 +14,12 @@ export function installAppNavigation(){
  const list=document.createElement('ul');
  for(const text of ['2026-10-25 正式公開。既存本番URLと初期設定の保存方式を継続。','計算値列を右に寄せ、見出しと数値の位置を調整。','標準表示の判定結果を5行・5列に整理し、記録簿転記用のN値を追加。','後輪制動力合計を結果左列に追加し、PCの左入力・右結果配置を復元。','ヘッダー名を「制動力計算」に変更し、計算結果一覧を表す共通アイコンを追加。','説明情報をアプリ内メニューへ移動し、更新履歴を追加。','入力中の左右差・軸別合計・全軸合計、結果の標準表示／大きく表示を整備。','確認条件の折りたたみ、結果下部の次の車両、A4上半分の計算記録票を追加。','計算式・判定基準・端数処理・単位換算は実務版3から変更なし。']){const item=document.createElement('li');item.textContent=text;list.append(item);}
  entry.append(title,date,list);changes.append(entry);
+ // Release 4.1.0 history start
+ const release=document.createElement('article');const releaseTitle=document.createElement('h3');releaseTitle.textContent='4.1.0（正式版）';const releaseDate=document.createElement('time');releaseDate.dateTime='2026-10-27';releaseDate.textContent='2026-10-27';const releaseList=document.createElement('ul');
+ for(const text of ['入力欄を軸重、前右・前左、前左右差、後右・後左、後左右差、総制動力、サイドの縦順に変更。','自動表示欄を背景で区別し、サイドブレーキを測定欄の末尾に独立配置。','標準表示の一覧構成を維持し、大きく表示では項目名・数値・単位・基準・適否をまとめて拡大。','結果と自動表示の数値を3桁区切りで表示。','PCのTab順を入力順に統一。自動フォーカス移動は追加なし。','計算式・判定基準・端数処理・初期設定保存・印刷は4.0.0から変更なし。']){const item=document.createElement('li');item.textContent=text;releaseList.append(item);}
+ release.append(releaseTitle,releaseDate,releaseList);changes.prepend(release);
+ // Release 4.1.0 history end
+
  const routes=[['guide','初めて使う方へ・入力方法',guide],['reference','計算式・端数処理・公式資料',sources],['about','アプリ情報',about],['history','更新履歴',changes]];
  const pages=new Map();
  for(const [key,label,content] of routes){
